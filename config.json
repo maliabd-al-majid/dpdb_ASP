@@ -1,0 +1,27 @@
+{
+  "db": {
+    "dsn": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "logicsem", 
+      "user": "logicsem", 
+      "password": "logicsem",
+      "application_name": "dpdb"
+    },
+    "max_connections": 100
+  },
+  "db_admin": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "logicsem",
+      "user": "postgres",
+      "password": "postgres",
+      "application_name": "dpdb-admin"
+  },
+  "htd": {
+    "path": "/home/mohamednadeem/project/htd/htd-normalize_cli"
+  },
+  "dpdb": {
+    "max_worker_threads": 24
+  }
+}
