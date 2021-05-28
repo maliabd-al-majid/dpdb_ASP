@@ -7,14 +7,13 @@ import signal
 import subprocess
 import sys
 
-from dpdb import problem
-from dpdb.db import BlockingThreadedConnectionPool, DEBUG_SQL, setup_debug_sql, DBAdmin
+from dpdb.db import BlockingThreadedConnectionPool, setup_debug_sql, DBAdmin
 # set library path
-from dpdb.problem import Problem
-from dpdb.problems import sat, VertexCover, Sat, SharpSat
+from dpdb.problems import SharpSat
 from dpdb.reader import TdReader
 from dpdb.treedecomp import TreeDecomp
 # from dpdb.writer import StreamWriter
+from asp.cyclicGraph import Graph
 from htd_validate.utils import hypergraph
 # import tool.clingoext
 from tool import clingoext
@@ -24,33 +23,10 @@ from tool.clingoext import ClingoRule
 
 
 # from dpdb.problems.sat_util import *
+from asp.asp_util import get_positive_value, get_rule_loop, read_cfg, get_rule_No_loop
 
 logger = logging.getLogger("asp2sat")
 logging.basicConfig(format='[%(levelname)s] %(name)s: %(message)s', level="INFO")
-
-
-def read_cfg(cfg_file):
-    import json
-
-    with open(cfg_file) as c:
-        cfg = json.load(c)
-    return cfg
-
-
-def flatten_cfg(dd, filter=[], separator='.', prefix=''):
-    if prefix.startswith(tuple(filter)):
-        return {}
-
-    if isinstance(dd, dict):
-        return {prefix + separator + k if prefix else k: v
-                for kk, vv in dd.items()
-                for k, v in flatten_cfg(vv, filter, separator, kk).items()
-                if not (prefix + separator + k).startswith(tuple(filter))
-                }
-    elif isinstance(dd, list):
-        return {prefix: " ".join(dd)}
-    else:
-        return {prefix: dd}
 
 
 class AppConfig(object):
@@ -83,15 +59,12 @@ class Application(object):
     def primalGraph(self):
         return self._graph
 
-    def _generate_rule(self):
+    def _generateRule(self):
         self._program = []
         self._rule = []
-        self._atomToVertex = {}  # htd wants succinct numbering of vertices / no holes
-        #     self._vertexToAtom = {} # inverse mapping of _atomToVertex
-        #  self.atomToVertex={}# we will use its id as vertex and value as actual atom
+        self._atomToVertex = {} 
         self._max = 1
-        #    self._nameMap = {} # we dont need this one
-        # unary = []
+
         i = self._max
         for o in self.control.ground_program.objects:
 
@@ -114,10 +87,55 @@ class Application(object):
                         self._max = i
                         i += 1
 
+    def _generateCompletionRule(self):
+        self._completion_rule = []
+        head = set()
+        for rule in self._rule:
+            # print(rule)
+            # split head rule in multiple rules
+            if len(rule[0]) > 0:  # Rule
+                for head_in_rule in rule[0]:
+                    head.add(head_in_rule)
+            else:  # Integrity constraints
+                complete_rule = [[], [rule[1]]]
+                self._completion_rule.append(complete_rule)
+        for h in head:
+            body = []
+            for rule in self._rule:
+                if h in rule[0] and rule[1] not in body:
+                    body.append(rule[1])
+            complete_rule = [[h], body]
+            self._completion_rule.append(complete_rule)
+
+    def _get_loop(self):
+        # here we will compute set of atoms which has loops , so we can compute external support afterwards.
+        atoms_in_head = set()
+        atoms_in_body = set()
+        for rule in self._rule:
+            iterator = filter(get_positive_value, rule[1])
+            positive_atoms = set(iterator)  # positive atoms in body
+            if len(positive_atoms) > 0:
+                atoms_in_body.update(positive_atoms)
+                atoms_in_head.update(rule[0])
+                # should only consider atoms in head which has at least one positive atom in body.
+        loop_atoms = atoms_in_head.intersection(atoms_in_body)
+        # atoms_loop should contain the only atoms that can have loops.
+        # loop sets can be only part of atoms_loop.
+        self._loop_rule = get_rule_loop(self._rule, loop_atoms)
+        g = Graph(len(loop_atoms))
+        for rule in self._loop_rule:
+            for head in rule[0]:
+                for body in rule[1]:
+                    # loop rule might contains atoms that will not be part of loop
+                    if head in list(loop_atoms) and body in list(loop_atoms):
+                        g.addEdge(body, head)
+        self._loop = g.cycles()
+
     def _generatePrimalGraph(self):
         self._graph = hypergraph.Hypergraph()
-        self._generate_rule()
-        self._generate_completion_rule()
+        self._generateRule()
+        self._generateCompletionRule()
+        self._generateExternalSupports()
         for complete_rule in self._completion_rule:
             atoms = set()
             for head in complete_rule[0]:
@@ -127,7 +145,6 @@ class Application(object):
                 atoms.update(tuple(map(abs, body)))  # body
             self._graph.add_hyperedge(tuple(map(lambda x: self._atomToVertex[x], atoms)))
 
-    # print(self._program)
     def solve_problem(self, file, cfg):
         def signal_handler(sig, frame):
             if sig == signal.SIGUSR1:
@@ -156,27 +173,6 @@ class Application(object):
         problem.setup()
         problem.solve()
 
-    def _generate_completion_rule(self):
-        self._completion_rule = []
-        head = set()
-        for rule in self._rule:
-           # print(rule)
-            # split head rule in multiple rules
-            if len(rule[0]) > 0:  # Rule
-                for head_in_rule in rule[0]:
-                    head.add(head_in_rule)
-            else:  # Integrity constraints
-                complete_rule = [[], [rule[1]]]
-                self._completion_rule.append(complete_rule)
-        for h in head:
-            body = []
-            for rule in self._rule:
-                if h in rule[0] and rule[1] not in body:
-                    body.append(rule[1])
-            complete_rule = [[h], body]
-            self._completion_rule.append(complete_rule)
-        #print(self._completion_rule)
-
     def _decomposeGraph(self):
         # Run htd
         p = subprocess.Popen(
@@ -203,7 +199,7 @@ class Application(object):
             f"Tree decomposition #bags: {self._td.num_bags} tree_width: {self._td.tree_width} #vertices: {self._td.num_orig_vertices} #leafs: {len(self._td.leafs)} #edges: {len(self._td.edges)}")
         # logger.info(self._td.nodes)
 
-    def _generateClauses_complete_rule(self):
+    def _generateClausesCompleteRule(self):
         print("p cnf " + str(len(self._atomToVertex)) + " " + str(len(self._completion_rule)))
         for complete_rule in self._completion_rule:
             clause = ""
@@ -222,7 +218,7 @@ class Application(object):
             clause += "0"
             print(clause)
 
-    def _generateClauses_rule(self):
+    def _generateClausesRule(self):
         print("p cnf " + str(len(self._atomToVertex)) + " " + str(len(self._rule)))
         for r in self._rule:
             clause = ""
@@ -238,6 +234,14 @@ class Application(object):
                     clause += str(self._atomToVertex[body] * -1) + " "
             clause += "0"
             print(clause)
+
+    def _generateExternalSupports(self):
+        self._get_loop()  # loop(P)
+        self._externalSupport = [get_rule_No_loop(self._rule, loop_atoms) for loop_atoms in self._loop]
+        logger.info(" Generating External Support")
+        logger.info(self._loop)
+        for part in self._externalSupport:
+            logger.info(part)
 
     def main(self, clingo_control, files):
         """
@@ -257,15 +261,13 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
-        # pprint(self.control.ground_program.objects)
-        logger.info("------------------------------------------------------------")
         logger.info(self.control.ground_program)
         logger.info("------------------------------------------------------------")
         logger.info(" Generating Primal Graph")
         self._generatePrimalGraph()
-      #  logger.info("------------------------------------------------------------")
-       # logger.info(" Generating Clauses")
-       # self._generateClauses_rule()
+        #  logger.info("------------------------------------------------------------")
+        # logger.info(" Generating Clauses")
+        # self._generateClauses_rule()
         logger.info("------------------------------------------------------------")
         logger.info(" Decomposing Graph")
         self._decomposeGraph()
