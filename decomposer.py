@@ -62,9 +62,9 @@ class Application(object):
     def _generateRule(self):
         self._program = []
         self._rule = []
-        self._atomToVertex = {} 
+        self._atomToVertex = {}
         self._max = 1
-
+        self._unary = set()
         i = self._max
         for o in self.control.ground_program.objects:
 
@@ -76,16 +76,28 @@ class Application(object):
                 if len(o.atoms) > 1 or len(o.head) == 0:
                     # added head is empty to disable condition that body should be > 1
                     # this one for generating cliques and ground rule to collect nodes .
+
                     atom_in_head = set(o.head)
                     atom_in_body = set(o.body)
                     temp = [atom_in_head, atom_in_body]
                     self._rule.append(temp)
 
-                    for a in o.atoms.difference(self._atomToVertex):
-                        # add mapping for atom not yet mapped
-                        self._atomToVertex[a] = i
-                        self._max = i
-                        i += 1
+                else:
+
+                    atom_in_body = set()
+                    atom_in_head = set()
+                    if len(o.head) == 1:
+                        atom_in_head.update(o.head)
+                    else:
+                        atom_in_body.update(o.body)
+                    self._unary.update(o.atoms)
+                    temp = [atom_in_head, atom_in_body]
+                    self._rule.append(temp)
+                for a in o.atoms.difference(self._atomToVertex):
+                    # add mapping for atom not yet mapped
+                    self._atomToVertex[a] = i
+                    self._max = i
+                    i += 1
 
     def _generateCompletionRule(self):
         self._completion_rule = []
@@ -129,13 +141,14 @@ class Application(object):
                     # loop rule might contains atoms that will not be part of loop
                     if head in list(loop_atoms) and body in list(loop_atoms):
                         g.addEdge(body, head)
+
         self._loop = g.cycles()
 
-    def _generatePrimalGraph(self):
-        self._graph = hypergraph.Hypergraph()
-        self._generateRule()
-        self._generateCompletionRule()
-        self._generateExternalSupports()
+    def _setPrimalGraph(self):
+        # vertices
+        for u in self._unary:
+            self._graph.add_node(u)
+        # completion Rules
         for complete_rule in self._completion_rule:
             atoms = set()
             for head in complete_rule[0]:
@@ -144,6 +157,22 @@ class Application(object):
             for body in complete_rule[1]:
                 atoms.update(tuple(map(abs, body)))  # body
             self._graph.add_hyperedge(tuple(map(lambda x: self._atomToVertex[x], atoms)))
+        # External Support
+        for ES in self._externalSupport:
+            atoms = set()
+            for rules in ES:
+                atoms.update(rules[0])
+                atoms.update(tuple(map(abs, rules[1])))
+            self._graph.add_hyperedge(tuple(map(lambda x: self._atomToVertex[x], atoms)))
+
+    def _generatePrimalGraph(self):
+
+        self._generateRule()
+        self._generateCompletionRule()
+        self._generateExternalSupports()
+        self._graph = hypergraph.Hypergraph()
+        self._setPrimalGraph()
+        print(self._graph)
 
     def solve_problem(self, file, cfg):
         def signal_handler(sig, frame):
@@ -168,22 +197,22 @@ class Application(object):
 
         # print(rule)
 
-        problem.prepare_input(rule=self._completion_rule, atoms_vertex=self._atomToVertex)
+        problem.prepare_input(rule=self._completion_rule, atoms_vertex=self._atomToVertex,
+                              external_support=self._externalSupport)
         problem.set_td(self._td)
         problem.setup()
         problem.solve()
 
-    def _decomposeGraph(self):
+    def _decomposeGraph(self, cfg):
         # Run htd
         p = subprocess.Popen(
-            [os.path.join("/home/mohamednadeem/project/htd/htd-normalize_cli", "bin/htd_main"), "--seed", "12342134",
+            [os.path.join(cfg["htd"]["path"], "bin/htd_main"), "--seed", "12342134",
              "--input", "hgr"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
         logger.info("Running htd")
 
         p.stdin.write(self._graph.repr().encode())
         p.stdin.flush()
-        # StreamWriter(p.stdin).write_graph(self._graph,dimacs=False)
 
         p.stdin.close()
         tdr = TdReader.from_stream(p.stdout)
@@ -240,8 +269,7 @@ class Application(object):
         self._externalSupport = [get_rule_No_loop(self._rule, loop_atoms) for loop_atoms in self._loop]
         logger.info(" Generating External Support")
         logger.info(self._loop)
-        for part in self._externalSupport:
-            logger.info(part)
+        logger.info(self._externalSupport)
 
     def main(self, clingo_control, files):
         """
@@ -252,7 +280,7 @@ class Application(object):
             files = ["-"]
 
         self.control = clingoext.Control()
-
+        cfg = read_cfg("./config.json")
         for path in files:
             self.control.add("base", [], self._read(path))
 
@@ -270,10 +298,10 @@ class Application(object):
         # self._generateClauses_rule()
         logger.info("------------------------------------------------------------")
         logger.info(" Decomposing Graph")
-        self._decomposeGraph()
+        self._decomposeGraph(cfg)
         subprocess.call("./dpdb/purgeDB.sh")
         setup_debug_sql()
-        cfg = read_cfg("./config.json")
+
         self.solve_problem(files, cfg)
 
 

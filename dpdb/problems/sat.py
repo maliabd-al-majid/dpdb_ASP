@@ -19,7 +19,7 @@ class Sat(Problem):
         return td_node_column_def(var)
 
     def filter(self, node):
-        return filter(self.var_rule_dict, node,self.rules,self.atoms_vertices)
+        return filter(node, self.rules, self.atoms_vertices, self.external_support)
 
     def setup_extra(self):
         def create_tables():
@@ -45,12 +45,12 @@ class Sat(Problem):
         create_tables()
         insert_data()
 
-    def prepare_input(self, rule, atoms_vertex):
-        # input = CnfReader.from_file(fname)
-        self.atoms_vertices=atoms_vertex
+    def prepare_input(self,rule, atoms_vertex, external_support):
+        self.atoms_vertices = atoms_vertex
         self.num_vars = len(atoms_vertex)
         self.num_rules = len(rule)
         self.rules = rule
+        self.external_support = external_support
 
     def after_solve(self):
         root_tab = f"td_node_{self.td.root.id}"

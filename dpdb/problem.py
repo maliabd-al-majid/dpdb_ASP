@@ -131,21 +131,19 @@ class Problem(object):
     def filter(self, node):
         return "WHERE FALSE"
 
-    def prepare_input(self, fname):
+    def prepare_input(self, rule, atoms_vertex, external_support):
         pass
 
     def setup_extra(self):
         pass
 
     def before_solve(self):
-       # print("h")
         pass
 
     def after_solve(self):
         pass
 
     def before_solve_node(self, node, db):
-        #print("s")
         pass
 
     def after_solve_node(self, node, db):
@@ -163,8 +161,6 @@ class Problem(object):
         )
 
         extra_cols = self.candidate_extra_cols(node)
-      #  print(q)
-      #  print("ssq")
         if extra_cols:
             q += "{}{}".format(", " if node.vertices else "", ",".join(extra_cols))
 
@@ -176,12 +172,9 @@ class Problem(object):
 
         if len(node.children) > 1:
             q += " {} ".format(self.join(node))
-       # print(q)
-      #  print("sssss")
         return q
 
     def assignment_select(self, node):
-       # print(node.stored_vertices)
         sel_list = ",".join([var2col(v) if v in node.stored_vertices
                              else "null::{} {}".format(self.td_node_column_def(v)[1], var2col(v)) for v in
                              node.vertices])
@@ -199,8 +192,6 @@ class Problem(object):
 
     def assignment_view(self, node):
         q = "{} {}".format(self.assignment_select(node), self.filter(node))
-
-       # print(q)
         if node.stored_vertices:
             q += " GROUP BY {}".format(",".join([var2col(v) for v in node.stored_vertices]))
         extra_group = self.group_extra_cols(node)
@@ -213,7 +204,6 @@ class Problem(object):
         if not node.stored_vertices and not extra_group:
             q += " LIMIT 1"
 
-       # print(q)
         return q
 
     # the following methods should be considered final

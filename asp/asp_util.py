@@ -14,11 +14,16 @@ def get_rule_loop(rules, atoms):
 
 def get_rule_No_loop(rules, atoms):
     NoLoop_rules = list()
+    atoms_ES = set()
     for rule in rules:
 
         if len(atoms.intersection(rule[0])) > 0 and len(atoms.intersection(rule[1])) == 0:
+            atoms_ES.update(rule[0])
             # we use the observation that rule must contain two occurrences of atoms or more in rule to be part of loop.
             NoLoop_rules.append(rule)
+    # create new rule with empty body for atoms without External support
+    for atom in atoms.difference(atoms_ES):
+        NoLoop_rules.append([set([atom]), set()])
     return NoLoop_rules
 
 
