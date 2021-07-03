@@ -179,8 +179,10 @@ class DB(object):
             q = sql.Composed([q, sql.SQL(', ').join(map(sql.Identifier, columns))])
         if returning:
             q = sql.Composed([q, sql.SQL(" RETURNING {}").format(sql.Identifier(returning))])
+          #  print(q)
             return self.exec_and_fetch(q)
         else:
+           # print(q)
             self.execute(q)
 
     def persist_view(self, table, view=None):

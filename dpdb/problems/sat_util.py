@@ -89,54 +89,6 @@ def filter(node, rules, atoms_vertex, external_support):
     #print(ES_selected_rules)
     #print(selected_rules)
     if len(cur_cl) > 0:
-        """
-        print("WHERE {0} {1}".format(
-            "((({0})))".format(")) AND ((".join(
-                ["".join(
-                    # one direction <-
-                    ["".join(" OR ".join(map(lit2expr, rule[0]))),  # head
-                     ") OR((",
-                     ") AND (".join([" OR ".join(map(lit2expr_body, body_part)) for body_part in rule[1]])
-                     # other direction ->
-
-                        , ")))AND (("
-                        , "".join(" AND ".join(map(lit2expr_body, rule[0]))),  # head
-                     ")OR (",
-                     ") OR (".join([" AND ".join(map(lit2expr, body_part)) for body_part in rule[1]])
-                     ] if rule[0] and rule[1] != [[]]  # Rule
-                    # one direction <-
-                    # positive atoms
-                    else ["".join(" OR ".join(map(lit2expr, rule[0])))
-
-                          ] if rule[0]
-
-                    # Constraints only
-                    # one direction <-
-                    else ["".join(
-                        [" OR ".join(map(lit2expr_body, body_part)) for body_part in
-                         rule[1]] if rule[1] != [[]] else "False")
-
-                    ]
-
-                ) for rule in selected_rules]
-
-            )
-
-            ),
-            # Loop Formula LF(P) ->
-            "AND (({0}))".format(")) AND ((".join(["".join(
-                ["".join([" AND ".join(["".join(map(lit2expr_body, r[0])) for r in ES]),  # head
-                          ")OR (",
-                          ") OR (".join([" AND ".join(map(lit2expr, r[1])) if r[1] else "False" for r in ES])]
-                         )]
-
-            ) for ES in ES_selected_rules]))
-            if len(ES_selected_rules) > 0
-            else ""
-        )
-
-        )
-"""
         return "WHERE {0} {1}".format(
             "((({0})))".format(")) AND ((".join(
                 ["".join(
@@ -150,7 +102,7 @@ def filter(node, rules, atoms_vertex, external_support):
                         , "".join(" AND ".join(map(lit2expr_body, rule[0]))),  # head
                      ")OR (",
                      ") OR (".join([" AND ".join(map(lit2expr, body_part)) for body_part in rule[1]])
-                     ] if rule[0] and rule[1] != [[]]  # Rule
+                     ] if rule[0] and rule[1] != []  # Rule
                     # one direction <-
                     # positive atoms
                     else ["".join(" OR ".join(map(lit2expr, rule[0])))
@@ -161,7 +113,7 @@ def filter(node, rules, atoms_vertex, external_support):
                     # one direction <-
                     else ["".join(
                         [" OR ".join(map(lit2expr_body, body_part)) for body_part in
-                         rule[1]] if rule[1] != [[]] else "False")
+                         rule[1]] if rule[1] != [] else "False")
 
                     ]
 

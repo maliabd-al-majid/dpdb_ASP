@@ -1,3 +1,5 @@
 
 *.pyc
 *.pyc
+dpdb/problems/__pycache__/sharpsat.cpython-37.pyc
+*.pyc

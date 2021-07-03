@@ -115,8 +115,10 @@ class Application(object):
             body = []
             for rule in self._rule:
                 if h in rule[0] and rule[1] not in body:
-                    body.append(rule[1])
+                    if rule[1]:
+                        body.append(rule[1])
             complete_rule = [[h], body]
+
             self._completion_rule.append(complete_rule)
 
     def _get_loop(self):
@@ -172,7 +174,7 @@ class Application(object):
         self._generateExternalSupports()
         self._graph = hypergraph.Hypergraph()
         self._setPrimalGraph()
-        print(self._graph)
+        #print(self._graph)
 
     def solve_problem(self, file, cfg):
         def signal_handler(sig, frame):
@@ -195,7 +197,7 @@ class Application(object):
         pool = BlockingThreadedConnectionPool(1, cfg["db"]["max_connections"], **cfg["db"]["dsn"])
         problem = SharpSat(file, pool, **cfg["dpdb"])
 
-        # print(rule)
+        #print(self._completion_rule)
 
         problem.prepare_input(rule=self._completion_rule, atoms_vertex=self._atomToVertex,
                               external_support=self._externalSupport)
