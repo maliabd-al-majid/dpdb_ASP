@@ -5,7 +5,7 @@
 
 
 
- psql -U logicsem -c 'create or replace function pg_kill_all_sessions(db varchar, application varchar)
+ psql -U postgres -c 'create or replace function pg_kill_all_sessions(db varchar, application varchar)
 returns integer as
 $$
 begin
@@ -30,7 +30,7 @@ language plpgsql security definer volatile set search_path = pg_catalog;
  psql -U postgres -c 'CREATE DATABASE logicsem;'
 
 
- psql -U logicsem -c 'create or replace function pg_kill_all_sessions(db varchar, application varchar)
+ psql -U postgres -c 'create or replace function pg_kill_all_sessions(db varchar, application varchar)
 returns integer as
 $$
 begin
