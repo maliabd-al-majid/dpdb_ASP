@@ -278,12 +278,12 @@ class Application(object):
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
-        subprocess.call("/home/mohamednadeem/Documents/GitHub/dpdb_ASP/dpdb/purgeDB.sh")
+        subprocess.call("./dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
         self.control = clingoext.Control()
-        cfg = read_cfg("/home/mohamednadeem/Documents/GitHub/dpdb_ASP/config.json")
+        cfg = read_cfg("./config.json")
         for path in files:
             self.control.add("base", [], self._read(path))
 
