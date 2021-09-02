@@ -278,11 +278,12 @@ class Application(object):
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
+        subprocess.call("/home/mohamednadeem/Documents/GitHub/dpdb_ASP/dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
         self.control = clingoext.Control()
-        cfg = read_cfg("./config.json")
+        cfg = read_cfg("/home/mohamednadeem/Documents/GitHub/dpdb_ASP/config.json")
         for path in files:
             self.control.add("base", [], self._read(path))
 
@@ -291,7 +292,7 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
-        logger.info(self.control.ground_program)
+        #logger.info(self.control.ground_program)
         logger.info("------------------------------------------------------------")
         logger.info(" Generating Primal Graph")
         self._generatePrimalGraph()
@@ -301,7 +302,7 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info(" Decomposing Graph")
         self._decomposeGraph(cfg)
-        subprocess.call("./dpdb/purgeDB.sh")
+
         setup_debug_sql()
 
         self.solve_problem(files, cfg)

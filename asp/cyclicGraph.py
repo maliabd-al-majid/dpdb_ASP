@@ -23,6 +23,8 @@ class Graph:
                 fringe.append((next_state, path + [next_state]))
 
     def cycles(self):
-        cycles = [[node] + path for node in self.graph for path in self._dfs(node, node)]
-        return set(frozenset(s) for s in cycles)
-
+        try:
+            cycles = [[node] + path for node in self.graph for path in self._dfs(node, node)]
+            return set(frozenset(s) for s in cycles)
+        except:
+            return set(frozenset([]))

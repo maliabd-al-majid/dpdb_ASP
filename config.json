@@ -19,7 +19,7 @@
       "application_name": "dpdb-admin"
   },
   "htd": {
-    "path": "/home/mohamednadeem/project/htd/htd-normalize_cli"
+    "path": "./htd/htd-normalize_cli"
   },
   "dpdb": {
     "max_worker_threads": 24
