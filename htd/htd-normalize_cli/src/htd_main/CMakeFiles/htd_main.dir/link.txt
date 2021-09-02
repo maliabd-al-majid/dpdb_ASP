@@ -1,0 +1,1 @@
+/usr/bin/c++   -Wall -pedantic -Wextra -O3 -DNDEBUG  -rdynamic CMakeFiles/htd_main.dir/main.cpp.o  -o ../../bin/htd_main-1.2.0  -Wl,-rpath,/home/mohamednadeem/project/htd/htd-normalize_cli/lib: ../../lib/libhtd.so.0.0.0 ../../lib/libhtd_io.so.0.0.0 ../../lib/libhtd_cli.so.0.0.0 
