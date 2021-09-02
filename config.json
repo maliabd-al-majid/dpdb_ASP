@@ -3,9 +3,9 @@
     "dsn": {
       "host": "localhost",
       "port": 5432,
-      "database": "logicsem", 
-      "user": "logicsem", 
-      "password": "logicsem",
+      "database": "dpdb_pg",
+      "user": "janedoe",
+      "password": "janedoe",
       "application_name": "dpdb"
     },
     "max_connections": 100
@@ -13,13 +13,13 @@
   "db_admin": {
       "host": "localhost",
       "port": 5432,
-      "database": "logicsem",
-      "user": "postgres",
-      "password": "postgres",
+      "database": "postgres",
+      "user": "janedoe",
+      "password": "janedoe",
       "application_name": "dpdb-admin"
   },
   "htd": {
-    "path": "./htd/htd-normalize_cli"
+    "path": "/htd/htd-normalize_cli"
   },
   "dpdb": {
     "max_worker_threads": 24

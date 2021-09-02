@@ -174,7 +174,7 @@ class Application(object):
         self._generateExternalSupports()
         self._graph = hypergraph.Hypergraph()
         self._setPrimalGraph()
-        #print(self._graph)
+        # print(self._graph)
 
     def solve_problem(self, file, cfg):
         def signal_handler(sig, frame):
@@ -197,7 +197,7 @@ class Application(object):
         pool = BlockingThreadedConnectionPool(1, cfg["db"]["max_connections"], **cfg["db"]["dsn"])
         problem = SharpSat(file, pool, **cfg["dpdb"])
 
-        #print(self._completion_rule)
+        # print(self._completion_rule)
 
         problem.prepare_input(rule=self._completion_rule, atoms_vertex=self._atomToVertex,
                               external_support=self._externalSupport)
@@ -208,7 +208,7 @@ class Application(object):
     def _decomposeGraph(self, cfg):
         # Run htd
         p = subprocess.Popen(
-            [os.path.join(cfg["htd"]["path"], "bin/htd_main"), "--seed", "12342134",
+            [os.path.join(os.getcwd()+ cfg["htd"]["path"], "bin/htd_main"), "--seed", "12342134",
              "--input", "hgr"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
         logger.info("Running htd")
@@ -278,7 +278,7 @@ class Application(object):
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
-        subprocess.call("./dpdb/purgeDB.sh")
+        subprocess.call(os.getcwd() + "/dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
@@ -292,7 +292,7 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
-        #logger.info(self.control.ground_program)
+        # logger.info(self.control.ground_program)
         logger.info("------------------------------------------------------------")
         logger.info(" Generating Primal Graph")
         self._generatePrimalGraph()
