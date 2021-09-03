@@ -208,7 +208,7 @@ class Application(object):
     def _decomposeGraph(self, cfg):
         # Run htd
         p = subprocess.Popen(
-            [os.path.join(os.getcwd()+ cfg["htd"]["path"], "bin/htd_main"), "--seed", "12342134",
+            [cfg["htd"]["path"], "--seed", "12342134",
              "--input", "hgr"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
         logger.info("Running htd")
@@ -278,7 +278,7 @@ class Application(object):
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
-        subprocess.call(os.getcwd() + "/dpdb/purgeDB.sh")
+        subprocess.call("./dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
