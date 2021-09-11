@@ -278,7 +278,7 @@ class Application(object):
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
-        subprocess.call("./dpdb/purgeDB.sh")
+       # subprocess.call("./dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
