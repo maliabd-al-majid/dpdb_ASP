@@ -82,11 +82,12 @@ def filter(node, rules, atoms_vertex, external_support):
             if vertices <= vertice_set:
                 cur_cl.append(vertices)
                 selected_rule = [head_rule, body_rule]
+          #      print(selected_rule)
                 potential_rule.append(selected_rule)
         if vertices <= vertice_set:
             if len(es_set) == len(potential_rule):
-                ES_selected_rules.append(es_set)
-    #print(ES_selected_rules)
+                ES_selected_rules.append(potential_rule)
+   # print(ES_selected_rules)
     #print(selected_rules)
     if len(cur_cl) > 0:
         return "WHERE {0} {1}".format(
@@ -113,7 +114,7 @@ def filter(node, rules, atoms_vertex, external_support):
                     # one direction <-
                     else ["".join(
                         [" OR ".join(map(lit2expr_body, body_part)) for body_part in
-                         rule[1]] if rule[1] != [] else "False")
+                         rule[1]] if rule[1] != [[]] else "False")
 
                     ]
 

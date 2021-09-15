@@ -64,15 +64,16 @@ class Application(object):
         self._rule = []
         self._atomToVertex = {}
         self._max = 1
-        self._unary = set()
+        #  self._unary = set()
         i = self._max
         for o in self.control.ground_program.objects:
-
+            temp = []
             if isinstance(o, ClingoRule):
 
                 o.atoms = set(o.head)
                 o.atoms.update(tuple(map(abs, o.body)))
                 self._program.append(o)
+                #      self._unary.update(o.atoms)
                 if len(o.atoms) > 1 or len(o.head) == 0:
                     # added head is empty to disable condition that body should be > 1
                     # this one for generating cliques and ground rule to collect nodes .
@@ -80,24 +81,13 @@ class Application(object):
                     atom_in_head = set(o.head)
                     atom_in_body = set(o.body)
                     temp = [atom_in_head, atom_in_body]
-                    self._rule.append(temp)
+                    for a in o.atoms.difference(self._atomToVertex):
+                        # add mapping for atom not yet mapped
+                        self._atomToVertex[a] = i
+                        self._max = i
+                        i += 1
 
-                else:
-
-                    atom_in_body = set()
-                    atom_in_head = set()
-                    if len(o.head) == 1:
-                        atom_in_head.update(o.head)
-                    else:
-                        atom_in_body.update(o.body)
-                    self._unary.update(o.atoms)
-                    temp = [atom_in_head, atom_in_body]
                     self._rule.append(temp)
-                for a in o.atoms.difference(self._atomToVertex):
-                    # add mapping for atom not yet mapped
-                    self._atomToVertex[a] = i
-                    self._max = i
-                    i += 1
 
     def _generateCompletionRule(self):
         self._completion_rule = []
@@ -107,20 +97,16 @@ class Application(object):
             # split head rule in multiple rules
             if len(rule[0]) > 0:  # Rule
                 for head_in_rule in rule[0]:
-                    head.add(head_in_rule)
+                    body = []
+                    for rule in self._rule:
+                        if head_in_rule in rule[0] and rule[1] not in body:
+                            if rule[1]:
+                                body.append(rule[1])
+                    complete_rule = [[head_in_rule], body]
             else:  # Integrity constraints
                 complete_rule = [[], [rule[1]]]
-                self._completion_rule.append(complete_rule)
-        for h in head:
-            body = []
-            for rule in self._rule:
-                if h in rule[0] and rule[1] not in body:
-                    if rule[1]:
-                        body.append(rule[1])
-            complete_rule = [[h], body]
-
             self._completion_rule.append(complete_rule)
-
+       # print(self._completion_rule)
     def _get_loop(self):
         # here we will compute set of atoms which has loops , so we can compute external support afterwards.
         atoms_in_head = set()
@@ -148,35 +134,42 @@ class Application(object):
 
     def _setPrimalGraph(self):
         # vertices
-        for u in self._unary:
-            self._graph.add_node(u)
+
         # completion Rules
         for complete_rule in self._completion_rule:
             atoms = set()
-            for head in complete_rule[0]:
-                if head != 0:
-                    atoms.add(head)  # head
-            for body in complete_rule[1]:
-                atoms.update(tuple(map(abs, body)))  # body
+            atoms.update(tuple(map(abs, set.union(set(complete_rule[0]), *complete_rule[1]))))
+            atoms.discard(0)
             self._graph.add_hyperedge(tuple(map(lambda x: self._atomToVertex[x], atoms)))
-        # External Support
+
+            # External Support
         for ES in self._externalSupport:
             atoms = set()
             for rules in ES:
-                atoms.update(rules[0])
-                atoms.update(tuple(map(abs, rules[1])))
+                atoms.update(tuple(map(abs, set.union(set(rules[0]), set(rules[1])))))
+
             self._graph.add_hyperedge(tuple(map(lambda x: self._atomToVertex[x], atoms)))
 
     def _generatePrimalGraph(self):
 
         self._generateRule()
+        logger.info(" Generating Complete Rule")
         self._generateCompletionRule()
+        #  print(self._completion_rule)
+        logger.info("------------------------------------------------------------")
+        logger.info(" Generating External Support")
+
         self._generateExternalSupports()
+        #    print(self._externalSupport)
         self._graph = hypergraph.Hypergraph()
+        logger.info("------------------------------------------------------------")
+        logger.info(" Generating Primal Graph")
         self._setPrimalGraph()
-        # print(self._graph)
+        print(self._atomToVertex)
+        print(self._graph)
 
     def solve_problem(self, file, cfg):
+
         def signal_handler(sig, frame):
             if sig == signal.SIGUSR1:
                 logger.warning("Terminating because of error in worker thread")
@@ -269,16 +262,16 @@ class Application(object):
     def _generateExternalSupports(self):
         self._get_loop()  # loop(P)
         self._externalSupport = [get_rule_No_loop(self._rule, loop_atoms) for loop_atoms in self._loop]
-        logger.info(" Generating External Support")
-        logger.info(self._loop)
-        logger.info(self._externalSupport)
+
+    #    logger.info(self._loop)
+    #   logger.info(self._externalSupport)
 
     def main(self, clingo_control, files):
         """
         Entry point of the application registering the propagator and
         implementing the standard ground and solve functionality.
         """
-       # subprocess.call("./dpdb/purgeDB.sh")
+        # subprocess.call("./dpdb/purgeDB.sh")
         if not files:
             files = ["-"]
 
@@ -293,8 +286,8 @@ class Application(object):
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
         # logger.info(self.control.ground_program)
-        logger.info("------------------------------------------------------------")
-        logger.info(" Generating Primal Graph")
+        # logger.info("------------------------------------------------------------")
+
         self._generatePrimalGraph()
         #  logger.info("------------------------------------------------------------")
         # logger.info(" Generating Clauses")
