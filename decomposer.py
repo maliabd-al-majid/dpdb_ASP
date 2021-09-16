@@ -165,8 +165,8 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info(" Generating Primal Graph")
         self._setPrimalGraph()
-        print(self._atomToVertex)
-        print(self._graph)
+      #  print(self._atomToVertex)
+      #  print(self._graph)
 
     def solve_problem(self, file, cfg):
 
