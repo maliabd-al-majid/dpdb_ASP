@@ -88,8 +88,9 @@ def filter(node, rules, atoms_vertex, external_support):
             if len(es_set) == len(potential_rule):
                 ES_selected_rules.append(potential_rule)
    # print(ES_selected_rules)
-    #print(selected_rules)
+   # print(selected_rules)
     if len(cur_cl) > 0:
+
         return "WHERE {0} {1}".format(
             "((({0})))".format(")) AND ((".join(
                 ["".join(
@@ -124,8 +125,8 @@ def filter(node, rules, atoms_vertex, external_support):
 
             ),
             # Loop Formula LF(P) ->
-            "AND (({0}))".format(")) AND ((".join(["".join(
-                ["".join([" AND ".join(["".join(map(lit2expr_body, r[0])) for r in ES]),  # head
+            "AND    (({0}))".format(")) AND ((".join(["".join(
+                ["".join([" AND ".join([" AND ".join(map(lit2expr_body, r[0])) for r in ES]),  # head
                           ")OR (",
                           ") OR (".join([" AND ".join(map(lit2expr, r[1])) if r[1] else "False" for r in ES])]
                          )]
