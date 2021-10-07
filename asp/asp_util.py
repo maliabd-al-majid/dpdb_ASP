@@ -1,3 +1,7 @@
+from collections import defaultdict
+import logging
+
+logger = logging.getLogger(__name__)
 def get_positive_value(atom):
     return atom > 0
 
@@ -49,3 +53,67 @@ def flatten_cfg(dd, filter=[], separator='.', prefix=''):
         return {prefix: " ".join(dd)}
     else:
         return {prefix: dd}
+
+
+def lit2rule(lit):
+    if lit > 0:
+        return "x_{}".format(abs(lit))
+    else:
+        return "not x_{}".format(abs(lit))
+
+
+
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(frozenset(self))
+
+
+def _add_directed_edge(edges, adjacency_list, vertex1, vertex2):
+    if vertex1 == vertex2:
+        return
+
+    if vertex1 in adjacency_list:
+        adjacency_list[vertex1].add(vertex2)
+    else:
+        adjacency_list[vertex1] = set([vertex2])
+    if vertex1 < vertex2:
+        edges.add((vertex1, vertex2))
+
+def covered_rules(rules, vertices):
+    vertice_set = set(vertices)
+    cur_cl = set()
+    for v in vertices:
+        candidates = rules[v]
+       # print(rules[v])
+        for d in candidates:
+            for key, val in d.items():
+                if key.issubset(vertice_set):
+                    cur_cl.add(val)
+   # print(cur_cl)
+   # print(vertice_set)
+    return list(map(list,cur_cl))
+
+def program2primal(num_atoms, rules, atom_rule_dict=defaultdict(set), ret_adj=False):
+    edges = set([])
+    adj = {}
+    for rule in rules:
+        atoms = [abs(lit) for lit in frozenset().union(*rule)]
+    #    print(atoms)
+        rule_set = hashabledict({frozenset(atoms): frozenset(rule)})  # might need to convert rule into one set
+      #  print(rule_set)
+        for i in atoms:
+            atom_rule_dict[i].add(rule_set)
+
+            for j in atoms:
+                _add_directed_edge(edges, adj, i, j)
+                _add_directed_edge(edges, adj, j, i)
+       # print(atom_rule_dict)
+    if ret_adj:
+        logger.info("atoms:"+str(num_atoms))
+        logger.info("edges"+str(edges))
+        logger.info("adj"+str(adj))
+        #print("------------------------------------------------------")
+        return num_atoms, edges, adj
+    else:
+
+        return num_atoms, edges

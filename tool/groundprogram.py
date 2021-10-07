@@ -14,7 +14,6 @@ class ClingoOutputAtom(ClingoObject):
     symbol: Symbol
     atom: int
     order: int = 0
-
     def __lt__(self, other):
         if self.__class__ == other.__class__:
             return (self.symbol, self.atom) < (other.symbol, other.atom)
@@ -70,6 +69,7 @@ class GroundProgram():
 
     def add_rule(self, choice: bool = False, head: Iterable[int] = [], body: Iterable[int] = []) -> None: # pylint: disable=dangerous-default-value
         self.objects.append(ClingoRule(choice=choice, head=list(head), body=list(body)))
+
 
     def add_rules(self, rules: Iterable[ClingoRule]) -> None:
         self.objects.extend(rules)

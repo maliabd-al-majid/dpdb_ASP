@@ -5,7 +5,8 @@ from clingo.ast import AST  # type: ignore # pylint: disable=import-error, unuse
 from clingo import MessageCode, Symbol, TruthValue  # type: ignore # pylint: disable=import-error, unused-import, no-name-in-module
 from tool.groundprogram import GroundProgram, ClingoRule, ClingoOutputAtom, ClingoWeightRule, ClingoProject, ClingoExternal
 
-
+from clingo.symbol import Symbol
+from typing import Iterator, List, Optional, Tuple
 
 
 
@@ -22,6 +23,8 @@ class Control(object):  # type: ignore
         self.control = control
         self.non_ground_program: List[AST] = []
         self.ground_program = GroundProgram()
+        print(self.ground_program)
+        self.symbolic_atoms = self.control.symbolic_atoms
         self.control.register_observer(Observer(self.ground_program))
 
     def ground(self, parts: List[Tuple[str, List[Symbol]]] = None, context: Any = None) -> None:

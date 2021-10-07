@@ -1,3 +1,7 @@
+from asp.asp_util import lit2rule
+from dpdb.problems.sat_util import lit2expr
+
+
 class Writer(object):
     def write(self, str):
         pass
@@ -10,11 +14,12 @@ class Writer(object):
         pass
 
     def write_gr(self, num_vertices, edges):
-        self.writeline("p tw {0} {1}".format(num_vertices,len(edges)))
+        self.writeline("p tw {0} {1}".format(num_vertices, len(edges)))
         for e in edges:
-            self.writeline("{0} {1}".format(e[0],e[1]))
+            self.writeline("{0} {1}".format(e[0], e[1]))
         self.flush()
-    def write_graph(self,graph,dimacs):
+
+    def write_graph(self, graph, dimacs):
         gr_string = 'edge' if dimacs else 'htw'
         s = 'p ' if dimacs else ''
 
@@ -26,14 +31,24 @@ class Writer(object):
             self.write('%s%s %s\n' % (s, e_id + 1, nodes))
             print('%s%s %s\n' % (s, e_id + 1, nodes))
         self.flush()
+
     def write_td(self, num_bags, tree_width, num_orig_vertices, root, bags, edges):
         self.writeline("s td {0} {1} {2}".format(num_bags, tree_width + 1, num_orig_vertices))
         self.writeline("c r {0}".format(root))
         for b, v in bags.items():
-            self.writeline("b {0} {1}".format(b, " ".join(map(str,v))))
+            self.writeline("b {0} {1}".format(b, " ".join(map(str, v))))
         for e in edges:
-            self.writeline("{0} {1}".format(e[0],e[1]))
-        
+            self.writeline("{0} {1}".format(e[0], e[1]))
+
+    def write_program(self, rules, projected_atoms=None):
+        for rule in rules:
+            head, body = rule
+            self.writeline("{}:- {}.".format(" ; ".join(map(lit2rule, head)), " , ".join(map(lit2rule, body))))
+        for atom in projected_atoms:
+            self.writeline("#show {}/0.".format(str(abs(atom))))
+        self.flush()
+
+
 class StreamWriter(Writer):
     def __init__(self, stream):
         self.stream = stream
@@ -43,6 +58,7 @@ class StreamWriter(Writer):
 
     def flush(self):
         self.stream.flush()
+
 
 class FileWriter(Writer):
     def __init__(self, fname, mode="w"):

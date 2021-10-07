@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class DB(object):
     _pool = None
     _conn = None
-    _auto_commit = True
+    _auto_commit = False
     _praefix = None
     _ignore_next_praefix = 0
 
@@ -77,7 +77,7 @@ class DB(object):
         try:
             self.__debug_query__(q, p)
             with self._conn.cursor() as cur:
-                cur.execute(q,p)
+                cur.execute(q, p)
                 self.last_rowcount = cur.rowcount
         except pg.errors.AdminShutdown:
             logger.warning("Connection closed by admin")
@@ -89,6 +89,16 @@ class DB(object):
                 cur.execute(q, p)
                 self.last_rowcount = cur.rowcount
                 return cur.fetchone()
+        except pg.errors.AdminShutdown:
+            logger.warning("Connection closed by admin")
+
+    def exec_and_fetch_all(self, q, p=[]):
+        try:
+            self.__debug_query__(q, p)
+            with self._conn.cursor() as cur:
+                cur.execute(q, p)
+                self.last_rowcount = cur.rowcount
+                return cur.fetchall()
         except pg.errors.AdminShutdown:
             logger.warning("Connection closed by admin")
 
@@ -116,36 +126,17 @@ class DB(object):
         )
         self.execute_ddl(q)
 
-    def create_view(self, name, text):
-        #print(text)
-        q = sql.SQL("CREATE view  {} AS ").format(self.__table_name__(name))
-        q = sql.Composed([q, sql.SQL(text)])
-        #q = sql.Composed([q, sql.SQL(self.create_view_temptable(name,text))])
-        #q = sql.Composed([q, sql.SQL(";REFRESH MATERIALIZED VIEW CONCURRENTLY {}").format(self.__table_name__(name))])
-        self.execute_ddl(q)
-
-
-
-    def create_view_temptable(self, name,text):
-
-
-        insert = re.search('FROM (.*) AS', text)
-        #print(insert.group(1))
-        q = sql.SQL("CREATE materialized view {} AS {}").format(
-            self.__table_name__(str(name).replace("v","m")),
-            sql.SQL(insert.group(1))
-
+    def create_pk(self, table, columns):
+        q = sql.SQL("ALTER TABLE {} ADD PRIMARY KEY ({})").format(
+            self.__table_name__(table),
+            sql.SQL(', ').join(sql.Identifier(c) for c in columns)
         )
-        #q = sql.Composed([q,sql.SQL("CREATE UNIQUE INDEX ON {} ({});").format(self.__table_name__(str(name).replace("v","m")))])
-        #q = sql.Composed([q, sql.SQL(";REFRESH MATERIALIZED VIEW CONCURRENTLY {}").format(self.__table_name__(str(name).replace("v","m")))])
-       # print(q)
         self.execute_ddl(q)
-        #print(self.__table_name__(name))
-        replacement = re.search('FROM (.*) candidate', text)
-        query=text.replace(replacement.group(1), self._praefix+str(name).replace("v","m"))
-      #  print(query)
 
-        return query
+    def create_view(self, name, text):
+        q = sql.SQL("CREATE VIEW {} AS ").format(self.__table_name__(name))
+        q = sql.Composed([q, sql.SQL(text)])
+        self.execute_ddl(q)
 
     def replace_dynamic_tabs(self, query):
         def repl(m):
@@ -179,10 +170,8 @@ class DB(object):
             q = sql.Composed([q, sql.SQL(', ').join(map(sql.Identifier, columns))])
         if returning:
             q = sql.Composed([q, sql.SQL(" RETURNING {}").format(sql.Identifier(returning))])
-          #  print(q)
             return self.exec_and_fetch(q)
         else:
-           # print(q)
             self.execute(q)
 
     def persist_view(self, table, view=None):
@@ -201,6 +190,16 @@ class DB(object):
             q = sql.Composed([q, sql.SQL(" WHERE {}").format(sql.SQL(' AND ').join(map(sql.SQL, where)))])
 
         return self.exec_and_fetch(q)
+
+    def select_all(self, table, columns, where=None):
+        q = sql.SQL("SELECT {} FROM {}").format(
+            sql.SQL(', ').join(sql.SQL(c) for c in columns),
+            self.__table_name__(table)
+        )
+        if where:
+            q = sql.Composed([q, sql.SQL(" WHERE {}").format(sql.SQL(' AND ').join(map(sql.SQL, where)))])
+
+        return self.exec_and_fetch_all(q)
 
     def create_select(self, table, ass_sql):
         q = sql.SQL("CREATE TABLE {} AS {}").format(

@@ -74,6 +74,10 @@ class Problem(object):
     id = None
     td = None
 
+    @classmethod
+    def keep_cfg(cls):
+        return []
+
     def __init__(self, name, pool, max_worker_threads=12,
                  candidate_store="cte", limit_result_rows=None,
                  randomize_rows=False, **kwargs):
@@ -87,6 +91,9 @@ class Problem(object):
         self.type = type(self).__name__
         self.db = DB.from_pool(pool)
         self.interrupted = False
+        self.store_all_vertices = False
+        self.sub_procs = set()
+        self.interrupt_handler = []
 
     # overwrite the following methods (if required)
     def td_node_column_def(self, var):
@@ -131,7 +138,7 @@ class Problem(object):
     def filter(self, node):
         return "WHERE FALSE"
 
-    def prepare_input(self, rule, atoms_vertex, external_support):
+    def prepare_input(self, fname):
         pass
 
     def setup_extra(self):
@@ -172,28 +179,40 @@ class Problem(object):
 
         if len(node.children) > 1:
             q += " {} ".format(self.join(node))
+
         return q
 
     def assignment_select(self, node):
-        sel_list = ",".join([var2col(v) if v in node.stored_vertices
-                             else "null::{} {}".format(self.td_node_column_def(v)[1], var2col(v)) for v in
-                             node.vertices])
+        if self.store_all_vertices:
+            sel_list = ",".join([var2col(v) for v in node.vertices])
+        else:
+            sel_list = ",".join([var2col(v) if v in node.stored_vertices
+                                 else "null::{} {}".format(self.td_node_column_def(v)[1], var2col(v)) for v in
+                                 node.vertices])
         extra_cols = self.assignment_extra_cols(node)
         if extra_cols:
             sel_list += "{}{}".format(", " if sel_list else "", ",".join(extra_cols))
+
         candidates_sel = self.candidates_select(node)
+
         if self.candidate_store == "cte":
             q = f"WITH candidate AS ({candidates_sel}) SELECT {sel_list} FROM candidate"
         elif self.candidate_store == "subquery":
             q = f"SELECT {sel_list} FROM ({candidates_sel}) AS candidate"
         elif self.candidate_store == "table":
             q = f"SELECT {sel_list} FROM td_node_{node.id}_candidate"
+
         return q
 
     def assignment_view(self, node):
         q = "{} {}".format(self.assignment_select(node), self.filter(node))
-        if node.stored_vertices:
-            q += " GROUP BY {}".format(",".join([var2col(v) for v in node.stored_vertices]))
+
+        if node.stored_vertices or (self.store_all_vertices and node.vertices):
+            if self.store_all_vertices:
+                q += " GROUP BY {}".format(",".join([var2col(v) for v in node.vertices]))
+            else:
+                q += " GROUP BY {}".format(",".join([var2col(v) for v in node.stored_vertices]))
+
         extra_group = self.group_extra_cols(node)
         if extra_group:
             if not node.stored_vertices:
@@ -201,10 +220,13 @@ class Problem(object):
             else:
                 q += ", "
             q += "{}".format(",".join(extra_group))
-        if not node.stored_vertices and not extra_group:
-            q += " LIMIT 1"
 
+        if not node.stored_vertices and not extra_group and not self.store_all_vertices:
+            q += " LIMIT 1"
         return q
+
+    def get_root(self, bags, adj, htd_root):
+        return htd_root
 
     # the following methods should be considered final
     def set_td(self, td):
@@ -223,6 +245,7 @@ class Problem(object):
                 ("num_bags", "INTEGER"),
                 ("tree_width", "INTEGER"),
                 ("num_vertices", "INTEGER"),
+                ("td_root", "INTEGER"),
                 ("setup_start_time", "TIMESTAMP"),
                 ("calc_start_time", "TIMESTAMP"),
                 ("end_time", "TIMESTAMP")
@@ -236,9 +259,9 @@ class Problem(object):
 
         def init_problem():
             problem_id = self.db.insert("problem",
-                                        ["name", "type", "num_bags", "tree_width", "num_vertices"],
+                                        ["name", "type", "num_bags", "tree_width", "num_vertices", "td_root"],
                                         [self.name, self.type, self.td.num_bags, self.td.tree_width,
-                                         self.td.num_orig_vertices], "id")[0]
+                                         self.td.num_orig_vertices, self.td.root.id], "id")[0]
             self.set_id(problem_id)
             logger.info("Created problem with ID %d", self.id)
 
@@ -292,11 +315,9 @@ class Problem(object):
                 candidate_view = self.candidates_select(n)
                 candidate_view = db.replace_dynamic_tabs(candidate_view)
                 db.create_view(f"td_node_{n.id}_candidate_v", candidate_view)
-                #print(candidate_view)
             ass_view = self.assignment_view(n)
             ass_view = db.replace_dynamic_tabs(ass_view)
             db.create_view(f"td_node_{n.id}_v", ass_view)
-            #print(ass_view)
             if "parallel_setup" in self.kwargs and self.kwargs["parallel_setup"]:
                 db.close()
 
@@ -308,10 +329,14 @@ class Problem(object):
             self.db.insert("problem_option", ("id", "name", "value"),
                            (self.id, "limit_result_rows", self.limit_result_rows))
             self.db.insert("problem_option", ("id", "name", "value"), (self.id, "randomize_rows", self.randomize_rows))
-            for k, v in self.kwargs.items():
-                if v:
-                    self.db.ignore_next_praefix()
-                    self.db.insert("problem_option", ("id", "name", "value"), (self.id, k, v))
+            if "options" in args.specific[self.__class__]:
+                for k, v in args.specific[self.__class__]["options"].items():
+                    o = k
+                    if "dest" in v:
+                        o = v["dest"]
+                    if o in self.kwargs:
+                        self.db.ignore_next_praefix()
+                        self.db.insert("problem_option", ("id", "name", "value"), (self.id, o, self.kwargs[o]))
 
             for n in self.td.nodes:
                 self.db.insert("td_node_status", ["node"], [n.id])
@@ -347,6 +372,7 @@ class Problem(object):
         self.before_solve()
 
         workers = {}
+
         with ThreadPoolExecutor(self.max_worker_threads) as executor:
             for n in self.td.nodes:
                 e = executor.submit(self.node_worker, n, workers)
@@ -366,6 +392,11 @@ class Problem(object):
 
     def interrupt(self):
         self.interrupted = True
+        for h in self.interrupt_handler:
+            h()
+        for proc in list(self.sub_procs):
+            if proc.poll() is None:
+                proc.send_signal(signal.SIGTERM)
 
     def node_worker(self, node, workers):
         try:
@@ -381,7 +412,6 @@ class Problem(object):
             db = DB.from_pool(self.pool)
             db.set_praefix(f"p{self.id}_")
             logger.debug("Creating records for node %d", node.id)
-
             self.solve_node(node, db)
             db.close()
             if not self.interrupted:
@@ -405,20 +435,19 @@ class Problem(object):
             db.create_select(f"td_node_{node.id}", ass_view)
         else:
             select = f"SELECT * from td_node_{node.id}_v"
-            # print("Else check rows")
             if self.randomize_rows:
                 select += " ORDER BY RANDOM()"
-                # print("random row")
             if self.limit_result_rows and (node.stored_vertices or self.group_extra_cols(node)):
                 select += f" LIMIT {self.limit_result_rows}"
-                # print("limit result rows")
-            # print(db.replace_dynamic_tabs(select))
             db.insert_select(f"td_node_{node.id}", db.replace_dynamic_tabs(select))
         if self.interrupted:
             return
         self.after_solve_node(node, db)
+        if self.interrupted:
+            return
         if "faster" not in self.kwargs or not self.kwargs["faster"]:
             row_cnt = db.last_rowcount
             db.update("td_node_status", ["end_time", "rows"], ["statement_timestamp()", str(row_cnt)],
                       [f"node = {node.id}"])
         db.commit()
+

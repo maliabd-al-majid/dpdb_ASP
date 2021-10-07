@@ -2,7 +2,7 @@
 import logging
 from collections import defaultdict
 
-from dpdb.reader import CnfReader
+
 from dpdb.problem import *
 from .sat_util import *
 

@@ -3,7 +3,7 @@ import logging
 from collections import defaultdict
 
 from dpdb.problem import *
-from dpdb.reader import CnfReader
+
 from .sat_util import *
 
 logger = logging.getLogger(__name__)

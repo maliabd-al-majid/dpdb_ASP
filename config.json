@@ -19,9 +19,49 @@
       "application_name": "dpdb-admin"
   },
   "htd": {
-    "path": "./htd_validate/htd_main-1.2.0"
+    "path": "./htd_validate/htd_main-1.2.0",
+    "parameters": [
+      "--child-limit","5"
+    ]
   },
   "dpdb": {
     "max_worker_threads": 24
-  }
-}
+  },
+
+  "problem_specific": {
+    "nestpmc": {
+      "max_solver_threads": 12,
+      "inner_vars_threshold": 40
+    }
+  },
+  "nesthdb": {
+    "threshold_hybrid": 1000,
+    "threshold_abstract": 8,
+    "max_recursion_depth": 1,
+    "clingo_solver": {
+      "path": "clingo",
+      "args": "--models=0 --project --quiet",
+            "output_parser": {
+        "class": "RegExReader",
+        "args": {
+          "pattern": "Models       : (\\d+)"
+        },
+        "result": "result"
+      }
+    },
+    "asp": {
+      "encodings": [
+        {
+          "file": "./guess_min_degree.lp",
+          "size": 95,
+          "timeout": 10
+        },
+        {
+          "file": "./guess_increase2.lp",
+          "size": 64,
+          "timeout": 35
+        }
+      ]
+    }}}
+
+
