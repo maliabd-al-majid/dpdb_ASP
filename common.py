@@ -7,7 +7,7 @@ import subprocess
 from dpdb.db import DEBUG_SQL
 from dpdb.reader import TdReader
 from dpdb.writer import StreamWriter, FileWriter
-from dpdb.treedecomp import TreeDecomp
+from dpdb.treedecompext import TreeDecomp
 
 logger = logging.getLogger("common")
 
