@@ -33,6 +33,37 @@ def lit2expr2(node, lit, minors):
         return "NOT {}".format(lit2var2(node, lit, minors))
 
 
+def rule2expr(head, body, node, minor_vertices):  # direction -->
+    f = " ( "
+    if head:
+        f += "".join(" AND ".join([lit2expr2body(node, c, minor_vertices) for c in head]))
+    else:
+        f += "True"
+    f += ") OR ("
+    f += "".join(" AND ".join([lit2expr2(node, c, minor_vertices) for c in body]))
+    f += " ) "
+    return f
+
+
+def rule2expr2(head, body, node, minor_vertices):  # direction <--
+    f = " ( "
+    if head:
+        f += "".join(" OR ".join([lit2expr2(node, c, minor_vertices) for c in head]))
+    else:
+        f += "False"
+    f += ") OR ("
+    f += "".join(" OR ".join([lit2expr2body(node, c, minor_vertices) for c in body]))
+    f += " ) "
+    return f
+
+
+def lit2expr2body(node, lit, minors):
+    if lit < 0:
+        return lit2var2(node, lit, minors)
+    else:
+        return "NOT {}".format(lit2var2(node, lit, minors))
+
+
 class NestPmc(Problem):
     @classmethod
     def keep_cfg(cls):
@@ -110,8 +141,12 @@ class NestPmc(Problem):
             f += "WHERE "
             cur_cl = covered_rules(self.var_clause_dict, node.all_vertices)
             f += "({0})".format(") AND (".join(
-                # Need to be changed to Rule based evaluation
-                [" OR ".join([lit2expr2(node, c, minor_vertices) for c in frozenset().union(*rule)]) for rule in cur_cl]
+                # Rule based evaluation
+                ["({0}) AND ({1})".format(rule2expr(head, body, node, minor_vertices),
+                                          rule2expr2(head, body, node, minor_vertices)) for head, body in cur_cl]
+
+                # Need to be changed to Rule based evaluation [" OR ".join([lit2expr2(node, c, minor_vertices) for c
+                # in frozenset().union(*rule)]) for rule in cur_cl]
             ))
             f += ")"
         return f
@@ -224,7 +259,7 @@ class NestPmc(Problem):
         sum_count = self.db.replace_dynamic_tabs(f"(select coalesce(sum(model_count),0) from {root_tab})")
         self.db.ignore_next_praefix()
         self.model_count = \
-        self.db.update("problem_pmc", ["model_count"], [sum_count], [f"ID = {self.id}"], "model_count")[0]
+            self.db.update("problem_pmc", ["model_count"], [sum_count], [f"ID = {self.id}"], "model_count")[0]
         logger.info("Problem has %d models", self.model_count)
 
 
