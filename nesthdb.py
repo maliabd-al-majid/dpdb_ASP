@@ -72,6 +72,7 @@ class Application(object):
         self._max = 1
         i = self._max
         for o in self.control.ground_program.objects:
+           # print(o)
             if isinstance(o, ClingoProject):
                 self._project.update(o.atoms)
             if isinstance(o, ClingoRule):
@@ -79,7 +80,7 @@ class Application(object):
                 o.atoms.update(tuple(map(abs, o.body)))
                 self._program.append(o)
                 #      self._unary.update(o.atoms)
-                if len(o.atoms) >= 1:
+                if len(o.atoms) >= 1 and not o.choice:
                     # added head is empty to disable condition that body should be > 1
                     # this one for generating cliques and ground rule to collect nodes .
 
@@ -94,6 +95,7 @@ class Application(object):
                         self._max = i
                         i += 1
                     self._rule.append(temp)
+       # print(self._rule)
     def get_program(self):
         return self._atom, self._rule, self._project
 
@@ -216,7 +218,7 @@ class Problem:
         global cfg, solver_parser_cls, solver_parser
 
         logger.info(
-            f"Call solver: {type} with #vars {self.program.num_atoms}, #clauses {len(self.program.rules)}, #projected {len(self.projected)}")
+            f"Call solver: {type} with #atoms {self.program.num_atoms}, #rules {len(self.program.rules)}, #projected {len(self.projected)}")
 
         cfg_str = f"{type}_solver"
         assert (cfg_str in cfg["nesthdb"])
@@ -324,12 +326,12 @@ class Problem:
         logger.info(
             f"Original #atoms: {self.program.num_atoms}, #rules: {self.program.num_rules}, #projected: {len(self.projected_orig)}, depth: {self.depth}")
         # self.preprocess()
-        if not self.maybe_sat:
-            logger.info("Preprocessor UNSAT")
-            return 0
-        if self.models is not None:
-            logger.info(f"Solved by preprocessor: {self.models} models")
-            return self.final_result(self.models)
+      #  if not self.maybe_sat:
+       #     logger.info("Preprocessor UNSAT")
+        #    return 0
+        #if self.models is not None:
+         #   logger.info(f"Solved by preprocessor: {self.models} models")
+          #  return self.final_result(self.models)
 
         self.non_nested = self.non_nested.intersection(self.projected)
         logger.info(
@@ -428,7 +430,7 @@ def main():
 
 
     result = problem.solve()
-    #logger.info(f"PMC: {result}")
+    logger.info(f"PMC: {result}")
 
 
 if __name__ == "__main__":

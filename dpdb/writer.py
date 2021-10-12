@@ -41,11 +41,19 @@ class Writer(object):
             self.writeline("{0} {1}".format(e[0], e[1]))
 
     def write_program(self, rules, projected_atoms=None):
+        rules_head = set()
+        rules_body = set()
         for rule in rules:
             head, body = rule
+            rules_head.update(map(abs, head))
+            rules_body.update(map(abs, body))
             self.writeline("{}:- {}.".format(" ; ".join(map(lit2rule, head)), " , ".join(map(lit2rule, body))))
         for atom in projected_atoms:
-            self.writeline("#show {}/0.".format(str(abs(atom))))
+            self.writeline("#show {}/0.".format(lit2rule(abs(atom))))
+        choice = "{"
+        choice += ";".join(map(lit2rule, rules_body.difference(rules_head)))
+        choice += "}."
+        self.writeline(choice)
         self.flush()
 
 

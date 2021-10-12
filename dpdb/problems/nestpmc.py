@@ -5,63 +5,13 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # from nesthdb.solve import nesthdb
-from asp.asp_util import covered_rules
+from asp.asp_util import *
 from dpdb.abstraction import Abstraction
 from dpdb.problem import *
 # from dpdb.reader import CnfReader
 from .sat_util import *
 
 logger = logging.getLogger(__name__)
-
-
-def var2col2(node, var, minors):
-    # if node.is_minor(var):
-    if var in minors:
-        return "{}.val".format(var2tab_alias(node, var))
-    else:
-        return f"v{var}"
-
-
-def lit2var2(node, lit, minors):
-    return var2col2(node, abs(lit), minors)
-
-
-def lit2expr2(node, lit, minors):
-    if lit > 0:
-        return lit2var2(node, lit, minors)
-    else:
-        return "NOT {}".format(lit2var2(node, lit, minors))
-
-
-def rule2expr(head, body, node, minor_vertices):  # direction -->
-    f = " ( "
-    if head:
-        f += "".join(" AND ".join([lit2expr2body(node, c, minor_vertices) for c in head]))
-    else:
-        f += "True"
-    f += ") OR ("
-    f += "".join(" AND ".join([lit2expr2(node, c, minor_vertices) for c in body]))
-    f += " ) "
-    return f
-
-
-def rule2expr2(head, body, node, minor_vertices):  # direction <--
-    f = " ( "
-    if head:
-        f += "".join(" OR ".join([lit2expr2(node, c, minor_vertices) for c in head]))
-    else:
-        f += "False"
-    f += ") OR ("
-    f += "".join(" OR ".join([lit2expr2body(node, c, minor_vertices) for c in body]))
-    f += " ) "
-    return f
-
-
-def lit2expr2body(node, lit, minors):
-    if lit < 0:
-        return lit2var2(node, lit, minors)
-    else:
-        return "NOT {}".format(lit2var2(node, lit, minors))
 
 
 class NestPmc(Problem):
@@ -141,7 +91,9 @@ class NestPmc(Problem):
             f += "WHERE "
             cur_cl = covered_rules(self.var_clause_dict, node.all_vertices)
             f += "({0})".format(") AND (".join(
-                # Rule based evaluation
+                # Rule based evaluation (one direction <--)
+                #         ["({0})".format(rule2expr(head, body, node, minor_vertices)) for head, body in cur_cl]
+                # Completion based evaluation (two directions <-- and -->)
                 ["({0}) AND ({1})".format(rule2expr(head, body, node, minor_vertices),
                                           rule2expr2(head, body, node, minor_vertices)) for head, body in cur_cl]
 
@@ -212,6 +164,8 @@ class NestPmc(Problem):
         executor = ThreadPoolExecutor(self.max_solver_threads)
         futures = []
         rules = covered_rules(self.var_clause_dict, node.all_vertices)
+        #print(node.all_vertices)
+      #  print(rules)
         for r in db.select_all(f"td_node_{node.id}", cols):
             if not self.interrupted:
                 if len(node.all_vertices) - len(
@@ -230,22 +184,31 @@ class NestPmc(Problem):
             num_vars = len(node.all_vertices)
             # extra_clauses = []
             rules = list(covered_rules)
+
+           # print(rules)
+          #  print("NO Before:",len(rules))
             for i, v in enumerate(vals):
                 if v != None:
                     where.append("{} = {}".format(cols[i], v))
                     n = node.vertices[i]
+                    # adding constraints to discard the other possibility
                     if v:
-                        rules.append([n])
+                        rules.append([frozenset(), frozenset([n * -1])])
                     #         extra_clauses.append(n)
                     else:
-                        rules.append([n * (-1)])
+                        #print("value ", str(v))
+                        rules.append([frozenset(), frozenset([n])])
+           # print(rules)
+           # print("NO After:",len(rules))
                 #        extra_clauses.append(n*(-1))
             # actually, it is probably better to leave it like that such that one could use maybe #sat instead of pmc?
-            projected = self.projected.intersection(node.all_vertices) - set(node.vertices)
-            non_nested = self.non_nested.intersection(node.all_vertices) - set(node.vertices)
+
+            projected = self.projected.intersection(node.all_vertices) #- set(node.vertices)
+            non_nested = self.non_nested.intersection(node.all_vertices) # - set(node.vertices)
             logger.info(
                 f"Problem {self.id}: Calling recursive for bag {node.id}: {num_vars} {len(rules)} {len(projected)}")
             sat = self.rec_func(node.all_vertices, rules, non_nested, projected, self.depth + 1, **self.kwargs)
+           # print("SAT", str(sat))
             if not self.interrupted:
                 db.update(f"td_node_{node.id}", ["model_count"], ["model_count * {}::numeric".format(sat)], where)
                 db.commit()

@@ -1,6 +1,8 @@
 from collections import defaultdict
 import logging
 
+from dpdb.problem import var2tab_alias
+
 logger = logging.getLogger(__name__)
 def get_positive_value(atom):
     return atom > 0
@@ -63,6 +65,58 @@ def lit2rule(lit):
 
 
 
+def var2col2(node, var, minors):
+    # if node.is_minor(var):
+    if var in minors:
+        return "{}.val".format(var2tab_alias(node, var))
+    else:
+        return f"v{var}"
+
+
+def lit2var2(node, lit, minors):
+    return var2col2(node, abs(lit), minors)
+
+
+def lit2expr2(node, lit, minors):
+    if lit > 0:
+        return lit2var2(node, lit, minors)
+    else:
+        return "NOT {}".format(lit2var2(node, lit, minors))
+
+
+
+
+
+def lit2expr2body(node, lit, minors):
+    if lit < 0:
+        return lit2var2(node, lit, minors)
+    else:
+        return "NOT {}".format(lit2var2(node, lit, minors))
+
+
+def rule2expr(head, body, node, minor_vertices):  # direction -->
+    f = " ( "
+    if head:
+        f += "".join(" AND ".join([lit2expr2body(node, c, minor_vertices) for c in head]))
+    else:
+        f += "True"
+    f += ") OR ("
+    f += "".join(" AND ".join([lit2expr2(node, c, minor_vertices) for c in body]))
+    f += " ) "
+    return f
+
+
+def rule2expr2(head, body, node, minor_vertices):  # direction <--
+    f = " ( "
+    if head:
+        f += "".join(" OR ".join([lit2expr2(node, c, minor_vertices) for c in head]))
+    else:
+        f += "False"
+    f += ") OR ("
+    f += "".join(" OR ".join([lit2expr2body(node, c, minor_vertices) for c in body]))
+    f += " ) "
+    return f
+
 class hashabledict(dict):
     def __hash__(self):
         return hash(frozenset(self))
@@ -75,13 +129,15 @@ def _add_directed_edge(edges, adjacency_list, vertex1, vertex2):
     if vertex1 in adjacency_list:
         adjacency_list[vertex1].add(vertex2)
     else:
-        adjacency_list[vertex1] = set([vertex2])
+        adjacency_list[vertex1] = {vertex2}
     if vertex1 < vertex2:
         edges.add((vertex1, vertex2))
 
 def covered_rules(rules, vertices):
     vertice_set = set(vertices)
     cur_cl = set()
+    #print(rules)
+   # print(vertice_set)
     for v in vertices:
         candidates = rules[v]
        # print(rules[v])
@@ -96,10 +152,12 @@ def covered_rules(rules, vertices):
 def program2primal(num_atoms, rules, atom_rule_dict=defaultdict(set), ret_adj=False):
     edges = set([])
     adj = {}
+    #print(rules)
     for rule in rules:
         atoms = [abs(lit) for lit in frozenset().union(*rule)]
     #    print(atoms)
         rule_set = hashabledict({frozenset(atoms): frozenset(rule)})  # might need to convert rule into one set
+      #  print(rule_set)
       #  print(rule_set)
         for i in atoms:
             atom_rule_dict[i].add(rule_set)
