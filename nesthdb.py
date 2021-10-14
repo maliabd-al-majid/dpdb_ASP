@@ -65,8 +65,8 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
-        logger.info(self.control.ground_program.objects)
-        logger.info("------------------------------------------------------------")
+       # logger.info(self.control.ground_program.objects)
+       # logger.info("------------------------------------------------------------")
 
     def generate_rule(self):
         self._max = 1
@@ -285,6 +285,7 @@ class Problem:
         return final
 
     def get_cached(self):
+        #print(self.program.rules)
         frozen_rules = frozenset([frozenset(c) for c in self.program.rules])
         if frozen_rules in cache:
             return cache[frozen_rules]

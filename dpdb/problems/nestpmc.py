@@ -164,8 +164,6 @@ class NestPmc(Problem):
         executor = ThreadPoolExecutor(self.max_solver_threads)
         futures = []
         rules = covered_rules(self.var_clause_dict, node.all_vertices)
-        #print(node.all_vertices)
-      #  print(rules)
         for r in db.select_all(f"td_node_{node.id}", cols):
             if not self.interrupted:
                 if len(node.all_vertices) - len(
@@ -185,8 +183,8 @@ class NestPmc(Problem):
             # extra_clauses = []
             rules = list(covered_rules)
 
-           # print(rules)
-          #  print("NO Before:",len(rules))
+            # print(rules)
+            #  print("NO Before:",len(rules))
             for i, v in enumerate(vals):
                 if v != None:
                     where.append("{} = {}".format(cols[i], v))
@@ -196,19 +194,19 @@ class NestPmc(Problem):
                         rules.append([frozenset(), frozenset([n * -1])])
                     #         extra_clauses.append(n)
                     else:
-                        #print("value ", str(v))
+                        # print("value ", str(v))
                         rules.append([frozenset(), frozenset([n])])
-           # print(rules)
-           # print("NO After:",len(rules))
-                #        extra_clauses.append(n*(-1))
+            # print(rules)
+            # print("NO After:",len(rules))
+            #        extra_clauses.append(n*(-1))
             # actually, it is probably better to leave it like that such that one could use maybe #sat instead of pmc?
 
             projected = self.projected.intersection(node.all_vertices) #- set(node.vertices)
-            non_nested = self.non_nested.intersection(node.all_vertices) # - set(node.vertices)
+            non_nested = self.non_nested.intersection(node.all_vertices) #- set(node.vertices)
             logger.info(
                 f"Problem {self.id}: Calling recursive for bag {node.id}: {num_vars} {len(rules)} {len(projected)}")
             sat = self.rec_func(node.all_vertices, rules, non_nested, projected, self.depth + 1, **self.kwargs)
-           # print("SAT", str(sat))
+            # print("SAT", str(sat))
             if not self.interrupted:
                 db.update(f"td_node_{node.id}", ["model_count"], ["model_count * {}::numeric".format(sat)], where)
                 db.commit()

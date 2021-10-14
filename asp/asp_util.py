@@ -135,7 +135,7 @@ def _add_directed_edge(edges, adjacency_list, vertex1, vertex2):
 
 def covered_rules(rules, vertices):
     vertice_set = set(vertices)
-    cur_cl = set()
+    cur_cl = list()
     #print(rules)
    # print(vertice_set)
     for v in vertices:
@@ -144,19 +144,21 @@ def covered_rules(rules, vertices):
         for d in candidates:
             for key, val in d.items():
                 if key.issubset(vertice_set):
-                    cur_cl.add(val)
+                    cur_cl.append(val)
    # print(cur_cl)
    # print(vertice_set)
     return list(map(list,cur_cl))
 
-def program2primal(num_atoms, rules, atom_rule_dict=defaultdict(set), ret_adj=False):
+def program2primal(num_atoms, rules, atom_rule_dict=None, ret_adj=False):
+    if atom_rule_dict is None:
+        atom_rule_dict = defaultdict(set)
     edges = set([])
     adj = {}
     #print(rules)
     for rule in rules:
         atoms = [abs(lit) for lit in frozenset().union(*rule)]
     #    print(atoms)
-        rule_set = hashabledict({frozenset(atoms): frozenset(rule)})  # might need to convert rule into one set
+        rule_set = hashabledict({frozenset(atoms): rule})  # might need to convert rule into one set
       #  print(rule_set)
       #  print(rule_set)
         for i in atoms:
@@ -167,9 +169,9 @@ def program2primal(num_atoms, rules, atom_rule_dict=defaultdict(set), ret_adj=Fa
                 _add_directed_edge(edges, adj, j, i)
        # print(atom_rule_dict)
     if ret_adj:
-        logger.info("atoms:"+str(num_atoms))
-        logger.info("edges"+str(edges))
-        logger.info("adj"+str(adj))
+        #logger.info("atoms:"+str(num_atoms))
+     #   logger.info("edges"+str(edges))
+       # logger.info("adj"+str(adj))
         #print("------------------------------------------------------")
         return num_atoms, edges, adj
     else:

@@ -43,6 +43,8 @@ class Writer(object):
     def write_program(self, rules, projected_atoms=None):
         rules_head = set()
         rules_body = set()
+        # print(rules)
+
         for rule in rules:
             head, body = rule
             rules_head.update(map(abs, head))
