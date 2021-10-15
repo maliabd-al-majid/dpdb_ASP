@@ -17,6 +17,8 @@ from dpdb.problems.sat_util import *
 from dpdb.writer import FileWriter
 from tool import clingoext
 from tool.groundprogram import ClingoRule, ClingoProject
+import time
+start_time = time.time()
 
 logger = logging.getLogger("nestHDB")
 # setup_logging("DEBUG")
@@ -432,7 +434,7 @@ def main():
 
     result = problem.solve()
     logger.info(f"PMC: {result}")
-
+    logger.info("Time: %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":
     main()
