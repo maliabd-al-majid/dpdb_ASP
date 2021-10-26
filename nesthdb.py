@@ -5,8 +5,6 @@ import logging
 import sys
 import tempfile
 
-
-
 from asp.asp_util import program2primal
 from common import *
 from dpdb.abstraction import MinorGraph, ClingoControl
@@ -18,6 +16,7 @@ from dpdb.writer import FileWriter
 from tool import clingoext
 from tool.groundprogram import ClingoRule, ClingoProject
 import time
+
 start_time = time.time()
 
 logger = logging.getLogger("nestHDB")
@@ -67,14 +66,15 @@ class Application(object):
         logger.info("------------------------------------------------------------")
         logger.info("   Grounded Program")
         logger.info("------------------------------------------------------------")
-       # logger.info(self.control.ground_program.objects)
-       # logger.info("------------------------------------------------------------")
+
+    # logger.info(self.control.ground_program.objects)
+    # logger.info("------------------------------------------------------------")
 
     def generate_rule(self):
         self._max = 1
         i = self._max
         for o in self.control.ground_program.objects:
-           # print(o)
+            # print(o)
             if isinstance(o, ClingoProject):
                 self._project.update(o.atoms)
             if isinstance(o, ClingoRule):
@@ -97,7 +97,8 @@ class Application(object):
                         self._max = i
                         i += 1
                     self._rule.append(temp)
-       # print(self._rule)
+
+    # print(self._rule)
     def get_program(self):
         return self._atom, self._rule, self._project
 
@@ -128,7 +129,7 @@ class Graph:
         return len(self.edges)
 
     def abstract(self, non_nested):
-       # print(non_nested)
+        # print(non_nested)
         proj_out = self.nodes - non_nested
         mg = MinorGraph(self.nodes, self.adj_list, proj_out)
         mg.abstract()
@@ -186,11 +187,9 @@ class Problem:
         self.nested_problem = None
         self.active_process = None
 
-
-
     def decompose_nested_primal(self):
         num_vars, edges, adj = program2primal(self.program.num_atoms, self.program.rules, self.program.atoms_rules_dict,
-                                          True)
+                                              True)
         self.graph = Graph(set(self.program.atoms), edges, adj)
         logger.info(f"Primal graph #vertices: {num_vars}, #edges: {len(edges)}")
         self.graph.abstract(self.non_nested)
@@ -248,7 +247,7 @@ class Problem:
                     return -1
 
                 self.active_process = psat = subprocess.Popen(solver + [tmp], stdout=subprocess.PIPE)
-                output = solver_parser_cls.from_stream(psat.stdout,**solver_parser["args"])
+                output = solver_parser_cls.from_stream(psat.stdout, **solver_parser["args"])
                 psat.wait()
                 psat.stdout.close()
                 self.active_process = None
@@ -270,10 +269,11 @@ class Problem:
         # uncomment the following line for sharpsat solving
         # return self.call_solver("sharpsat")
         return self.call_solver("clingo")
+
     #    if self.program.atoms == self.projected:
     #        return self.call_solver("sharpsat")
-     #   else:
-       #     return self.call_solver("pmc")
+    #   else:
+    #     return self.call_solver("pmc")
 
     def final_result(self, result):
         len_old = len(self.projected_orig)
@@ -287,7 +287,7 @@ class Problem:
         return final
 
     def get_cached(self):
-        #print(self.program.rules)
+        # print(self.program.rules)
         frozen_rules = frozenset([frozenset(c) for c in self.program.rules])
         if frozen_rules in cache:
             return cache[frozen_rules]
@@ -325,17 +325,9 @@ class Problem:
             return -1
         return self.nested_problem.model_count
 
-    def solve(self):
+    def solve(self, original=False):
         logger.info(
             f"Original #atoms: {self.program.num_atoms}, #rules: {self.program.num_rules}, #projected: {len(self.projected_orig)}, depth: {self.depth}")
-        # self.preprocess()
-      #  if not self.maybe_sat:
-       #     logger.info("Preprocessor UNSAT")
-        #    return 0
-        #if self.models is not None:
-         #   logger.info(f"Solved by preprocessor: {self.models} models")
-          #  return self.final_result(self.models)
-
         self.non_nested = self.non_nested.intersection(self.projected)
         logger.info(
             f"Preprocessing #atoms: {self.program.num_atoms}, #rules: {self.program.num_rules}, #projected: {len(self.projected)}")
@@ -346,7 +338,6 @@ class Problem:
                 logger.info(f"Cache hit: {cached}")
                 return cached
 
-
         if len(self.projected.intersection(self.program.atoms)) == 0:
             logger.info("Intersection of atoms and projected is empty")
             return self.final_result(self.solve_classic())
@@ -354,8 +345,9 @@ class Problem:
         if self.depth >= cfg["nesthdb"]["max_recursion_depth"]:
             return self.final_result(self.solve_classic())
 
-
         self.decompose_nested_primal()
+        if original:
+            logger.info(f"Original tree_width: {self.graph.tree_decomp.tree_width}")
 
         if interrupted:
             return -1
@@ -412,8 +404,9 @@ def main():
     Decomposer.ground()
     Decomposer.generate_rule()
     output = Decomposer.get_program()
-    program = Program(output[0],output[1],output[2])
-    problem = Problem(program,program.atoms,**vars(args))
+    logger.info(f"Original projections: {len(output[2])}")
+    program = Program(output[0], output[1], output[2])
+    problem = Problem(program, program.atoms, **vars(args))
 
     def signal_handler(sig, frame):
         if sig == signal.SIGUSR1:
@@ -431,10 +424,10 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGUSR1, signal_handler)
 
-
-    result = problem.solve()
+    result = problem.solve(original=True)
     logger.info(f"PMC: {result}")
     logger.info("Time: %s seconds" % (time.time() - start_time))
+
 
 if __name__ == "__main__":
     main()

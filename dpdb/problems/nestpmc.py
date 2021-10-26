@@ -191,6 +191,7 @@ class NestPmc(Problem):
                     n = node.vertices[i]
                     # adding constraints to discard the other possibility
                     if v:
+
                         rules.append([frozenset(), frozenset([n * -1])])
                     #         extra_clauses.append(n)
                     else:
@@ -200,7 +201,7 @@ class NestPmc(Problem):
             # print("NO After:",len(rules))
             #        extra_clauses.append(n*(-1))
             # actually, it is probably better to leave it like that such that one could use maybe #sat instead of pmc?
-
+            print(rules , "asdadasd", str(vals) , node.vertices)
             projected = self.projected.intersection(node.all_vertices) #- set(node.vertices)
             non_nested = self.non_nested.intersection(node.all_vertices) #- set(node.vertices)
             logger.info(

@@ -1,3 +1,5 @@
+import logging
+
 from asp.asp_util import lit2rule
 from dpdb.problems.sat_util import lit2expr
 
@@ -44,17 +46,23 @@ class Writer(object):
         rules_head = set()
         rules_body = set()
         # print(rules)
-
+        logger = logging.getLogger("program")
+        program = ""
         for rule in rules:
             head, body = rule
             rules_head.update(map(abs, head))
             rules_body.update(map(abs, body))
             self.writeline("{}:- {}.".format(" ; ".join(map(lit2rule, head)), " , ".join(map(lit2rule, body))))
+            program += "{}:- {}.".format(" ; ".join(map(lit2rule, head)), " , ".join(map(lit2rule, body)))
         for atom in projected_atoms:
             self.writeline("#show {}/0.".format(lit2rule(abs(atom))))
+           # logger.info("#show {}/0.".format(lit2rule(abs(atom))))
+            program += "#show {}/0.".format(lit2rule(abs(atom)))
         choice = "{"
         choice += ";".join(map(lit2rule, rules_body.difference(rules_head)))
         choice += "}."
+        program += choice
+        logger.info(program)
         self.writeline(choice)
         self.flush()
 
