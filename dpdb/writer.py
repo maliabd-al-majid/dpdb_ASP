@@ -62,7 +62,7 @@ class Writer(object):
         choice += ";".join(map(lit2rule, rules_body.difference(rules_head)))
         choice += "}."
         program += choice
-        logger.info(program)
+        #logger.info(program)
         self.writeline(choice)
         self.flush()
 

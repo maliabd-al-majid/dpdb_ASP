@@ -23,7 +23,7 @@ class Control(object):  # type: ignore
         self.control = control
         self.non_ground_program: List[AST] = []
         self.ground_program = GroundProgram()
-        print(self.ground_program)
+
         self.symbolic_atoms = self.control.symbolic_atoms
         self.control.register_observer(Observer(self.ground_program))
 

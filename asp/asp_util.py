@@ -134,19 +134,13 @@ def _add_directed_edge(edges, adjacency_list, vertex1, vertex2):
         edges.add((vertex1, vertex2))
 
 def covered_rules(rules, vertices):
-    vertice_set = set(vertices)
+   # vertice_set = set(vertices)
     cur_cl = list()
-    #print(rules)
-   # print(vertice_set)
     for v in vertices:
         candidates = rules[v]
-       # print(rules[v])
         for d in candidates:
             for key, val in d.items():
-                if key.issubset(vertice_set):
-                    cur_cl.append(val)
-   # print(cur_cl)
-   # print(vertice_set)
+                cur_cl.append(val)
     return list(map(list,cur_cl))
 
 def program2primal(num_atoms, rules, atom_rule_dict=None, ret_adj=False):

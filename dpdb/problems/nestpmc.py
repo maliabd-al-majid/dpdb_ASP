@@ -201,15 +201,18 @@ class NestPmc(Problem):
             # print("NO After:",len(rules))
             #        extra_clauses.append(n*(-1))
             # actually, it is probably better to leave it like that such that one could use maybe #sat instead of pmc?
-            print(rules , "asdadasd", str(vals) , node.vertices)
-            projected = self.projected.intersection(node.all_vertices) #- set(node.vertices)
-            non_nested = self.non_nested.intersection(node.all_vertices) #- set(node.vertices)
+            # print(rules , "asdadasd", str(vals) , node.vertices)
+            projected = self.projected.intersection(node.all_vertices)  # - set(node.vertices)
+            non_nested = self.non_nested.intersection(node.all_vertices)  # - set(node.vertices)
             logger.info(
                 f"Problem {self.id}: Calling recursive for bag {node.id}: {num_vars} {len(rules)} {len(projected)}")
             sat = self.rec_func(node.all_vertices, rules, non_nested, projected, self.depth + 1, **self.kwargs)
             # print("SAT", str(sat))
             if not self.interrupted:
-                db.update(f"td_node_{node.id}", ["model_count"], ["model_count * {}::numeric".format(sat)], where)
+                if sat == 0:
+                    db.delete(f"td_node_{node.id}", where)
+                else:
+                    db.update(f"td_node_{node.id}", ["model_count"], ["model_count * {}::numeric".format(sat)], where)
                 db.commit()
         except Exception as e:
             raise e

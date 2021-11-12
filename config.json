@@ -54,12 +54,12 @@
         {
           "file": "./guess_min_degree.lp",
           "size": 95,
-          "timeout": 100
+          "timeout": 10
         },
         {
           "file": "./guess_increase.lp",
           "size": 64,
-          "timeout": 300
+          "timeout": 35
         }
       ]
     }}}

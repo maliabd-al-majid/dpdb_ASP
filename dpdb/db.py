@@ -208,6 +208,13 @@ class DB(object):
         )
         self.execute_ddl(q)
 
+    def delete(self, table, where=None):
+        if where:
+            sql_str = "DELETE FROM {} "
+            q = sql.SQL(sql_str).format(self.__table_name__(table))
+            q = sql.Composed([q, sql.SQL(" WHERE {}").format(sql.SQL(' AND ').join(map(sql.SQL, where)))])
+            self.execute(q)
+
     def update(self, table, columns, values, where=None, returning=None):
         sql_str = "UPDATE {} SET {}"
         q = sql.SQL(sql_str).format(
