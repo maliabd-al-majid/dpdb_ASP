@@ -39,6 +39,12 @@ Basic configuration (database connection, htd PATH, ...) are configured in **con
 python3 decomposer.py ./test_program.lp
 ```
 ### Nesthdb
+#### Ground program with gringo
 ```python
-python3 nesthdb.py -f ./test_program.lp   --config Config.json_PATH_FILE
+gringo ./test_program.lp --text > ground_program
+```
+#### Run Nesthdb to the obtained Ground program
+```python
+gringo ./test_program.lp --text
+python3 nesthdb.py -f ./ground_program  --config Config.json_PATH_FILE
 ```
