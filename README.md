@@ -21,20 +21,26 @@ pip install clingo
 * Python 3
 * psycopg2
 * future-fstrings
+* Clingo
 
 ```bash
 pip install psycopg2
 pip install future-fstrings
-
+pip install clingo
 ```
 
 ## Configuration
-Basic configuration (database connection, htd path, ...) are configured in **config.json**
-
+Basic configuration (database connection, htd PATH, ...) are configured in **config.json**
+### Nesthdb
+* configuration (database connection, htd PATH, guess_min.lp PATH, guess_increase.lp PATH) are configured in **config.json**
 ## Usage
-
+### DPDB
 ```python
 python3 decomposer.py ./test_program.lp
+```
+### Nesthdb
+```python
+python3 nesthdb.py -f ./test_program.lp   --config Config.json_PATH_FILE
 ```
 ## Results
 
