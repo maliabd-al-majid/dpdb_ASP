@@ -1,4 +1,4 @@
-# dpdb_ASP
+# Nesthdb and Dpdb
 
 Solve dynamic programming problems on tree decomposition using databases
 
